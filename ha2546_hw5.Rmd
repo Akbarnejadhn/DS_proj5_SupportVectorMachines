@@ -96,19 +96,41 @@ svmr_fit$bestTune
 summary(svmr_fit)
 ```
 
-### Then, I look at training error rates of both SVM kernels
+### Then, I look at training error rates of both SVM models with linare and radial kernels
 ```{r train_error}
 
 set.seed(2020)
+
+#looking at train performance of linear kernel
+svml_pred2 = predict(svml_fit, newdata = train_data)
+
+confusionMatrix(data = svml_pred2,
+                reference = oj_data$purchase[train_rows])
+
+#looking at train performance of radial kernel
+svmr_pred2 = predict(svmr_fit, newdata = train_data)
+
+confusionMatrix(data = svmr_pred2,
+                reference = oj_data$purchase[train_rows])
+```
+
+From confusion matrices above, we can observe that SVM with linear kernel has training error rate of `r round((1-0.8425)*100, 2)`% and SVM with radial kernel has training error rate of `r round((1-0.84)*100, 2)`% These values are very close to each other. 
+
+```{r model_selection}
+
+set.seed(2020)
+
 resamp = resamples(list(svm_radial = svmr_fit, svm_linear = svml_fit))
 summary(resamp)
 bwplot(resamp)
 ```
 
-The summary of *resamples()* function show that SVM with linear kernel has training error rate of `r round((1-0.8249269)*100, 2)`% and SVM with radial kernel has training error rate of `r round((1-0.85)*100, 2)`%. So, if we want to select one of these models, we would prefer radial kernel with lower mean error. However, we can observe that the values are pretty close.
+Also, the summary of *resamples()* function show the mean accuracy of 0.8323957 (cross validation error = `r round((1-0.8323957)*100, 2)`%) for SVM with linear kernel and the mean accuracy of of 0.8298957 (cross validation error rate = `r round((1-0.8298957)*100, 2)`%) for SVM with radial kernel. So, if we want to select one of these models, I think the one with linear kernel is a better choice because the model is less complicated while the cross validated is not that different (less than 1 percent).
 
 
-### Finally, I look at test performance of both SVM kernels
+
+
+### Finally, I look at test performance of both SVM models with linare and radial kernels
 ```{r test_error}
 
 #looking at test performance of linear kernel
