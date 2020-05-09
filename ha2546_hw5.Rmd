@@ -80,8 +80,8 @@ summary(svml_fit)
 ```{r radial_kernel}
 
 set.seed(2020)
-svmr_grid = expand.grid(C = exp(seq(-4,5,len=10)),
-                        sigma = exp(seq(-8,-3,len=5)))
+svmr_grid = expand.grid(C = exp(seq(-5,6,len=20)),
+                        sigma = exp(seq(-9,-2,len=10)))
 
 svmr_fit = train(purchase~., train_data,
                   method = "svmRadial",
@@ -104,17 +104,18 @@ set.seed(2020)
 #looking at train performance of linear kernel
 svml_pred2 = predict(svml_fit, newdata = train_data)
 
-confusionMatrix(data = svml_pred2,
+cm_linear = confusionMatrix(data = svml_pred2,
                 reference = oj_data$purchase[train_rows])
+
 
 #looking at train performance of radial kernel
 svmr_pred2 = predict(svmr_fit, newdata = train_data)
 
-confusionMatrix(data = svmr_pred2,
+cm_radial = confusionMatrix(data = svmr_pred2,
                 reference = oj_data$purchase[train_rows])
 ```
 
-From confusion matrices above, we can observe that SVM with linear kernel has training error rate of `r round((1-0.8425)*100, 2)`% and SVM with radial kernel has training error rate of `r round((1-0.84)*100, 2)`% These values are very close to each other. 
+From confusion matrices above, we can observe that SVM with linear kernel has training error rate of `r round((1-cm_linear$overall['Accuracy'])*100, 2)`% and SVM with radial kernel has training error rate of `r round((1-cm_radial$overall['Accuracy'])*100, 2)`%. We can see that these values are very close to each other with less than 0.5% difference. 
 
 ```{r model_selection}
 
@@ -125,9 +126,7 @@ summary(resamp)
 bwplot(resamp)
 ```
 
-Also, the summary of *resamples()* function show the mean accuracy of 0.8323957 (cross validation error = `r round((1-0.8323957)*100, 2)`%) for SVM with linear kernel and the mean accuracy of of 0.8298957 (cross validation error rate = `r round((1-0.8298957)*100, 2)`%) for SVM with radial kernel. So, if we want to select one of these models, I think the one with linear kernel is a better choice because the model is less complicated while the cross validated is not that different (less than 1 percent).
-
-
+Also, the summary of *resamples()* function show the mean accuracy of 0.84 (cross validation error = `r round((1-0.84)*100, 2)`%) for SVM with linear kernel and the mean accuracy of of 0.84 (cross validation error rate = `r round((1-0.84)*100, 2)`%) for SVM with radial kernel. So, if we want to select one of these models, I think the one with linear kernel is a better choice because the model is less complicated while the cross validated error is not that different.
 
 
 ### Finally, I look at test performance of both SVM models with linare and radial kernels
@@ -136,14 +135,14 @@ Also, the summary of *resamples()* function show the mean accuracy of 0.8323957 
 #looking at test performance of linear kernel
 svml_pred = predict(svml_fit, newdata = test_data)
 
-confusionMatrix(data = svml_pred,
+cm_linear2 = confusionMatrix(data = svml_pred,
                 reference = oj_data$purchase[-train_rows])
 
 #looking at test performance of radial kernel
 svmr_pred = predict(svmr_fit, newdata = test_data)
 
-confusionMatrix(data = svmr_pred,
+cm_radial2 = confusionMatrix(data = svmr_pred,
                 reference = oj_data$purchase[-train_rows])
 ```
 
-Looking at confusion matrix of two SVM models, we can see that test error rate of the one with linear kernel is `r round((1-0.863)*100, 2)`% and the test error rate of the one with radial kernel is `r round((1-0.8481)*100, 2)`%. So, it seems that linear kernel has a better model performance on test dataset.
+Looking at confusion matrix of two SVM models, we can see that test error rate of the one with linear kernel is `r round((1-cm_linear2$overall['Accuracy'])*100, 2)`% and the test error rate of the one with radial kernel is `r round((1-cm_radial2$overall['Accuracy'])*100, 2)`%. So, it seems that linear kernel and radial kernel models' performance on test dataset are pretty much the same.
