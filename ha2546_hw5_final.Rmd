@@ -1,0 +1,151 @@
+---
+title: "Support Vector Machines (SVM)"
+author: "Hana Akbarnejad"
+date: "5/10/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(viridis)
+library(ggplot2)
+library(readr)
+library(patchwork)
+
+library(caret)
+library(e1071)
+library(ISLR) # for data
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+set.seed(2020)
+```
+
+```{r include=FALSE}
+
+data(OJ)
+oj_data = OJ
+oj_data = oj_data %>% 
+  janitor::clean_names() %>% 
+  mutate(
+    purchase = as.factor(purchase)
+  )
+
+set.seed(2020)
+train_rows = createDataPartition(y = oj_data$purchase,
+                                 p = 0.746729,
+                                 list = FALSE)
+train_data = oj_data[train_rows,]
+test_data = oj_data[-train_rows,]
+
+ctrl = trainControl(method = "cv")
+```
+
+### First I fit a support vector classifier (linear kernel) to the training data.
+```{r linear_kernel}
+
+set.seed(2020)
+# SWM with linear kernel, caret
+svml_fit = train(purchase~.,
+                  data = train_data,
+                  method = "svmLinear2",
+                  preProcess = c("center", "scale"),
+                  tuneGrid = data.frame(cost = exp(seq(-7,5,len=20))),
+                  trControl = ctrl)
+
+ggplot(svml_fit, highlight = TRUE)
+
+svml_fit$bestTune
+
+summary(svml_fit)
+```
+
+### Then, I fit a support vector machine with a radial kernel to the training data.
+```{r radial_kernel}
+
+set.seed(2020)
+svmr_grid = expand.grid(C = exp(seq(-6,7,len=15)),
+                        sigma = exp(seq(-10,-1,len=10)))
+
+svmr_fit = train(purchase~., train_data,
+                  method = "svmRadial",
+                  preProcess = c("center", "scale"),
+                  tuneGrid = svmr_grid,
+                  trControl = ctrl)
+
+ggplot(svmr_fit, highlight = TRUE)
+
+svmr_fit$bestTune
+
+summary(svmr_fit)
+```
+
+### Then, I look at training error rates of both SVM models with linare and radial kernels
+```{r training_error}
+
+set.seed(2020)
+
+#looking at train performance of linear kernel
+svml_pred2 = predict(svml_fit, newdata = train_data)
+
+cm_linear = confusionMatrix(data = svml_pred2,
+                reference = oj_data$purchase[train_rows])
+
+
+#looking at train performance of radial kernel
+svmr_pred2 = predict(svmr_fit, newdata = train_data)
+
+cm_radial = confusionMatrix(data = svmr_pred2,
+                reference = oj_data$purchase[train_rows])
+```
+
+From confusion matrices above, we can observe that SVM with linear kernel has training error rate of `r round((1-cm_linear$overall['Accuracy'])*100, 2)`% and SVM with radial kernel has training error rate of `r round((1-cm_radial$overall['Accuracy'])*100, 2)`%. We can see that these values are very close to each other with less than 0.5% difference. 
+
+```{r model_selection}
+ 
+set.seed(2020)
+
+resamp = resamples(list(svm_radial = svmr_fit, svm_linear = svml_fit))
+summary(resamp)
+bwplot(resamp)
+```
+
+Also, the summary of *resamples()* function show the mean accuracy of 0.8335 (cross validation error = `r round((1-0.8335)*100, 2)`%) for SVM with linear kernel and the mean accuracy of of 0.8311 (cross validation error rate = `r round((1-0.8311)*100, 2)`%) for SVM with radial kernel. So, if we want to select one of these models, I think the one with linear kernel is a better choice because the model is less complicated while the cross validated error is not that different.
+
+### Finally, I look at test performance of both SVM models with linare and radial kernels
+```{r test_error}
+
+set.seed(2020)
+
+#looking at test performance of linear kernel
+svml_pred = predict(svml_fit, newdata = test_data)
+
+cm_linear2 = confusionMatrix(data = svml_pred,
+                reference = oj_data$purchase[-train_rows])
+
+#looking at test performance of radial kernel
+svmr_pred = predict(svmr_fit, newdata = test_data)
+
+cm_radial2 = confusionMatrix(data = svmr_pred,
+                reference = oj_data$purchase[-train_rows])
+```
+
+Looking at confusion matrix of two SVM models, we can see that test error rate of the one with linear kernel is `r round((1-cm_linear2$overall['Accuracy'])*100, 2)`% and the test error rate of the one with radial kernel is `r round((1-cm_radial2$overall['Accuracy'])*100, 2)`%. So, it seems that linear kernel and radial kernel models' performance on test dataset are pretty much the same and pretty close to training errors.
+
